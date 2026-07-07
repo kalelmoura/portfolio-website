@@ -43,7 +43,7 @@ export default function ChatSection({
           transition={{ duration: 0.45, ease: [0.22, 0.9, 0.3, 1] }}
           className="flex h-14 w-14 items-center justify-center rounded-full border border-white/70 bg-white/70 shadow-[0_10px_28px_-10px_rgba(30,58,138,0.25)] backdrop-blur"
         >
-          <GKLogo className="h-9 w-9 text-green-500" />
+          <GKLogo className="h-9 w-9" />
         </motion.div>
 
         <motion.div

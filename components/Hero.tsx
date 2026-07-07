@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { motion, useMotionValue, useSpring } from "framer-motion";
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import FluidCursor from "./FluidCursor";
 import GKLogo from "./GKLogo";
 import {
   BriefcaseIcon,
@@ -15,7 +16,7 @@ import {
   WrenchIcon,
 } from "./icons";
 
-const TITLES = ["Software Engineer", "Comp. Sci Student"];
+const TITLES = ["Software Engineer", "Comp. Science Student"];
 
 function useTypewriter(words: string[], typeSpeed = 85, deleteSpeed = 45, pause = 1700) {
   const [text, setText] = useState("");
@@ -58,7 +59,7 @@ const SECTION_LINKS = [
   { label: "About", href: "#about", Icon: SmileIcon, color: "text-green-500" },
   { label: "Projects", href: "#projects", Icon: BriefcaseIcon, color: "text-blue-500" },
   { label: "Tech Stack", href: "#tech-stack", Icon: LayersIcon, color: "text-indigo-500" },
-  { label: "Currently Building", href: "#currently-building", Icon: WrenchIcon, color: "text-amber-500" },
+  { label: "Building", href: "#currently-building", Icon: WrenchIcon, color: "text-amber-500" },
   { label: "Contact", href: "#contact", Icon: MailIcon, color: "text-purple-500" },
 ];
 
@@ -69,37 +70,11 @@ const fadeUp = (delay: number) => ({
 });
 
 export default function Hero() {
-  const sectionRef = useRef<HTMLElement>(null);
   const title = useTypewriter(TITLES);
-
-  // cursor-following gradient — blue blob and green blob trail the mouse
-  // at different spring speeds, only inside the hero
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  const blueX = useSpring(mouseX, { stiffness: 55, damping: 18 });
-  const blueY = useSpring(mouseY, { stiffness: 55, damping: 18 });
-  const greenX = useSpring(mouseX, { stiffness: 30, damping: 22 });
-  const greenY = useSpring(mouseY, { stiffness: 30, damping: 22 });
-
-  useEffect(() => {
-    const el = sectionRef.current;
-    if (!el) return;
-    mouseX.set(el.clientWidth * 0.6);
-    mouseY.set(el.clientHeight * 0.4);
-  }, [mouseX, mouseY]);
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    const rect = sectionRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    mouseX.set(e.clientX - rect.left);
-    mouseY.set(e.clientY - rect.top);
-  };
 
   return (
     <section
       id="home"
-      ref={sectionRef}
-      onMouseMove={handleMouseMove}
       className="relative flex min-h-screen items-center overflow-hidden pt-16"
     >
       {/* static ambient wash so the hero has color before the mouse moves */}
@@ -107,33 +82,12 @@ export default function Hero() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(600px circle at 15% 20%, rgba(59,130,246,0.10), transparent 70%), radial-gradient(700px circle at 85% 75%, rgba(34,197,94,0.10), transparent 70%)",
+            "radial-gradient(700px circle at 20% 25%, rgba(34,197,94,0.16), transparent 70%), radial-gradient(800px circle at 80% 70%, rgba(74,222,128,0.18), transparent 70%), radial-gradient(500px circle at 60% 20%, rgba(59,130,246,0.08), transparent 70%)",
         }}
       />
 
-      {/* cursor-following blobs */}
-      <motion.div
-        aria-hidden
-        className="pointer-events-none absolute left-0 top-0 h-[560px] w-[560px] rounded-full opacity-50 blur-[110px]"
-        style={{
-          x: blueX,
-          y: blueY,
-          marginLeft: -280,
-          marginTop: -280,
-          background: "radial-gradient(circle, rgba(59,130,246,0.55) 0%, transparent 65%)",
-        }}
-      />
-      <motion.div
-        aria-hidden
-        className="pointer-events-none absolute left-0 top-0 h-[480px] w-[480px] rounded-full opacity-50 blur-[100px]"
-        style={{
-          x: greenX,
-          y: greenY,
-          marginLeft: -160,
-          marginTop: -160,
-          background: "radial-gradient(circle, rgba(34,197,94,0.5) 0%, transparent 65%)",
-        }}
-      />
+      {/* cursor-following water — WebGL fluid sim, green/blue ink on the white page */}
+      <FluidCursor />
 
       <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center px-6 pb-28 pt-10 text-center">
         <motion.p
@@ -150,7 +104,7 @@ export default function Hero() {
           {...fadeUp(0.1)}
           className="mt-2 h-[1.25em] whitespace-nowrap text-[clamp(1.1rem,6.2vw,3.75rem)] font-black leading-[1.1] tracking-[-0.03em]"
         >
-          <span className="bg-gradient-to-r from-blue-600 to-green-500 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent">
             {title}
           </span>
           <span className="caret ml-0.5 font-light text-green-500">|</span>
@@ -164,7 +118,7 @@ export default function Hero() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={label}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white/70 text-[var(--sub)] shadow-sm backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:text-green-600 hover:shadow-md"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/65 bg-white/40 text-[var(--sub)] shadow-[0_10px_28px_-10px_rgba(30,58,138,0.25),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl backdrop-saturate-150 transition-all duration-200 hover:-translate-y-0.5 hover:text-green-600 hover:shadow-[0_16px_36px_-12px_rgba(30,58,138,0.3),inset_0_1px_0_rgba(255,255,255,0.9)]"
             >
               <Icon className="h-5 w-5" />
             </a>
@@ -178,7 +132,7 @@ export default function Hero() {
             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
             className="flex h-44 w-44 items-center justify-center rounded-full border border-white/70 bg-white/55 shadow-[0_24px_60px_-18px_rgba(30,58,138,0.18),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl sm:h-52 sm:w-52"
           >
-            <GKLogo className="h-28 w-28 text-green-500 sm:h-32 sm:w-32" />
+            <GKLogo className="h-28 w-28 sm:h-32 sm:w-32" />
           </motion.div>
         </motion.div>
 
@@ -203,7 +157,7 @@ export default function Hero() {
             <a
               key={href}
               href={href}
-              className="flex min-w-28 flex-col items-center gap-1.5 rounded-2xl border border-slate-200 bg-white/70 px-5 py-3.5 text-sm font-medium text-[var(--text)] shadow-sm backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              className="relative flex min-w-28 flex-col items-center gap-1.5 overflow-hidden rounded-2xl border border-white/65 bg-white/40 px-5 py-3.5 text-sm font-medium text-[var(--text)] shadow-[0_24px_60px_-18px_rgba(30,58,138,0.14),0_6px_20px_-6px_rgba(30,58,138,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl backdrop-saturate-150 transition-all duration-200 before:pointer-events-none before:absolute before:inset-x-[10%] before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/95 before:to-transparent hover:-translate-y-0.5 hover:shadow-[0_28px_70px_-18px_rgba(30,58,138,0.2),0_8px_24px_-6px_rgba(30,58,138,0.12),inset_0_1px_0_rgba(255,255,255,0.9)]"
             >
               <Icon className={`h-5 w-5 ${color}`} />
               {label}
@@ -215,9 +169,9 @@ export default function Hero() {
       {/* ghost watermark, like the reference's giant name at the fold */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-[-2vw] select-none text-center text-[19vw] font-black leading-none tracking-[-0.05em] text-slate-900/[0.04]"
+        className="pointer-events-none absolute inset-x-0 bottom-[-2vw] select-none text-center text-[16.5vw] font-black leading-none tracking-[-0.05em] text-slate-900/[0.04]"
       >
-        Kalel
+        SOFTWARE
       </div>
     </section>
   );
