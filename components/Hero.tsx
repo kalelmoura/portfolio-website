@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import FluidCursor from "./FluidCursor";
-import GKLogo from "./GKLogo";
 import {
   BriefcaseIcon,
   DownloadIcon,
@@ -16,7 +16,7 @@ import {
   WrenchIcon,
 } from "./icons";
 
-const TITLES = ["Software Engineer", "Comp. Science Student"];
+const TITLES = ["Software Engineer", "CS Student"];
 
 function useTypewriter(words: string[], typeSpeed = 85, deleteSpeed = 45, pause = 1700) {
   const [text, setText] = useState("");
@@ -125,14 +125,20 @@ export default function Hero() {
           ))}
         </motion.div>
 
-        {/* floating GK mark where the reference shows an illustration */}
+        {/* floating memoji avatar where the reference shows an illustration */}
         <motion.div {...fadeUp(0.3)} className="mt-8">
           <motion.div
             animate={{ y: [0, -12, 0] }}
             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-            className="flex h-44 w-44 items-center justify-center rounded-full border border-white/70 bg-white/55 shadow-[0_24px_60px_-18px_rgba(30,58,138,0.18),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl sm:h-52 sm:w-52"
           >
-            <GKLogo className="h-28 w-28 sm:h-32 sm:w-32" />
+            <Image
+              src="/memoji.png"
+              alt="Gabriel's memoji"
+              width={435}
+              height={640}
+              preload
+              className="h-48 w-auto drop-shadow-[0_24px_40px_rgba(30,58,138,0.22)] sm:h-56"
+            />
           </motion.div>
         </motion.div>
 
@@ -164,14 +170,6 @@ export default function Hero() {
             </a>
           ))}
         </motion.nav>
-      </div>
-
-      {/* ghost watermark, like the reference's giant name at the fold */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-[-2vw] select-none text-center text-[16.5vw] font-black leading-none tracking-[-0.05em] text-slate-900/[0.04]"
-      >
-        SOFTWARE
       </div>
     </section>
   );

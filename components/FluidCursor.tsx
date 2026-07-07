@@ -4,24 +4,32 @@ import { useEffect, useRef } from "react";
 
 /*
  * Real-time fluid simulation (stable fluids + vorticity confinement) driving a
- * cursor-following watercolor effect. Dye is stored as subtractive "ink" and
- * rendered inverted, so the canvas (mix-blend-multiply) stains the white page
- * like green/blue ink dropped in water.
+ * cursor-following plasma effect. Dye is stored as subtractive "ink" and
+ * rendered inverted, so the canvas (mix-blend-multiply) stains the white page.
+ * The cursor continuously exhales ink from a ring around it (more when it
+ * moves fast, a trickle when idle) while an eraser pass keeps the core white.
  *
  * Adapted from Pavel Dobryakov's WebGL-Fluid-Simulation (MIT).
  */
 
 const SIM_RESOLUTION = 144;
 const DYE_RESOLUTION = 720;
-const DENSITY_DISSIPATION = 1.05; // how fast the ink fades
-const VELOCITY_DISSIPATION = 0.3; // how fast the water calms down
+const DENSITY_DISSIPATION = 1.3; // how fast the ink fades — high = tight halo around the cursor
+const VELOCITY_DISSIPATION = 3.5; // high = viscous, motion dies out right next to the cursor
 const PRESSURE = 0.8;
 const PRESSURE_ITERATIONS = 20;
-const CURL = 26; // vorticity — bigger = more swirling
-const SPLAT_RADIUS = 0.0022;
-const SPLAT_FORCE = 5600;
-const INK_STRENGTH = 0.16;
-const COLOR_ROTATE_MS = 140;
+const CURL = 10; // vorticity — kept low for slow plasma swirls instead of chaotic marbling
+const SPLAT_RADIUS = 0.0042; // fat soft blobs (plasma) rather than thin ink jets
+const ERASE_RADIUS = 0.003; // white core under the cursor
+const ERASE_STRENGTH = 0.4; // per-frame fade toward white inside the core
+const CORE_OFFSET = 0.05; // ring (in v-units) the ink is thrown from — must clear the erase core
+const IDLE_POWER = 60; // throw strength while the mouse rests
+const POWER_GAIN = 110; // extra throw strength per uv/s of mouse speed
+const MAX_POWER = 320;
+const IDLE_INK = 0.014; // ink per frame while the mouse rests
+const INK_GAIN = 0.06; // extra ink per uv/s of mouse speed
+const MAX_INK = 0.12;
+const COLOR_ROTATE_MS = 200;
 
 // site palette — greens dominate, teal/blue as accents
 const PALETTE: Array<[number, number, number]> = [
@@ -36,7 +44,7 @@ const PALETTE: Array<[number, number, number]> = [
 
 type Ink = [number, number, number];
 
-function pickInk(strength = INK_STRENGTH): Ink {
+function pickInk(strength: number): Ink {
   const i =
     Math.random() < 0.7
       ? Math.floor(Math.random() * 4)
@@ -115,6 +123,25 @@ const SPLAT_FRAG = `
     vec3 splat = exp(-dot(p, p) / radius) * color;
     vec3 base = texture2D(uTarget, vUv).xyz;
     gl_FragColor = vec4(base + splat, 1.0);
+  }
+`;
+
+// multiplicative fade toward zero ink (= white) around the cursor
+const ERASE_FRAG = `
+  precision highp float;
+  precision highp sampler2D;
+  varying vec2 vUv;
+  uniform sampler2D uTarget;
+  uniform float aspectRatio;
+  uniform vec2 point;
+  uniform float radius;
+  uniform float strength;
+  void main () {
+    vec2 p = vUv - point.xy;
+    p.x *= aspectRatio;
+    float e = exp(-dot(p, p) / radius) * strength;
+    vec3 base = texture2D(uTarget, vUv).xyz;
+    gl_FragColor = vec4(base * (1.0 - e), 1.0);
   }
 `;
 
@@ -398,6 +425,7 @@ export default function FluidCursor() {
 
     const clearProgram = createProgram(baseVertex, frag(CLEAR_FRAG));
     const splatProgram = createProgram(baseVertex, frag(SPLAT_FRAG));
+    const eraseProgram = createProgram(baseVertex, frag(ERASE_FRAG));
     const advectionProgram = createProgram(
       baseVertex,
       frag(ADVECTION_FRAG, supportLinearFiltering ? undefined : ["MANUAL_FILTERING"]),
@@ -566,6 +594,18 @@ export default function FluidCursor() {
       dye.swap();
     }
 
+    function eraseAt(x: number, y: number) {
+      const g = gl!;
+      eraseProgram.bind();
+      g.uniform1i(eraseProgram.uniforms.uTarget, dye.read.attach(0));
+      g.uniform1f(eraseProgram.uniforms.aspectRatio, canvas!.width / canvas!.height);
+      g.uniform2f(eraseProgram.uniforms.point, x, y);
+      g.uniform1f(eraseProgram.uniforms.radius, correctRadius(ERASE_RADIUS));
+      g.uniform1f(eraseProgram.uniforms.strength, ERASE_STRENGTH);
+      blit(dye.write);
+      dye.swap();
+    }
+
     function step(dt: number) {
       const g = gl!;
 
@@ -640,11 +680,10 @@ export default function FluidCursor() {
     const pointer = {
       x: 0,
       y: 0,
-      dx: 0,
+      dx: 0, // uv delta accumulated since the last frame
       dy: 0,
-      moved: false,
       inside: false,
-      ink: pickInk(),
+      ink: pickInk(1),
       lastColorAt: 0,
     };
 
@@ -663,23 +702,14 @@ export default function FluidCursor() {
         pointer.inside = true;
         pointer.x = x;
         pointer.y = y;
+        pointer.dx = 0;
+        pointer.dy = 0;
         return;
       }
-      const aspect = canvas!.width / canvas!.height;
-      let dx = x - pointer.x;
-      let dy = y - pointer.y;
-      if (aspect < 1) dx *= aspect;
-      if (aspect > 1) dy /= aspect;
-      pointer.dx += dx * SPLAT_FORCE;
-      pointer.dy += dy * SPLAT_FORCE;
+      pointer.dx += x - pointer.x;
+      pointer.dy += y - pointer.y;
       pointer.x = x;
       pointer.y = y;
-      pointer.moved = pointer.moved || dx !== 0 || dy !== 0;
-      const now = performance.now();
-      if (now - pointer.lastColorAt > COLOR_ROTATE_MS) {
-        pointer.ink = pickInk();
-        pointer.lastColorAt = now;
-      }
     }
 
     function onPointerDown(e: PointerEvent) {
@@ -687,18 +717,47 @@ export default function FluidCursor() {
       const x = (e.clientX - rect.left) / rect.width;
       const y = 1 - (e.clientY - rect.top) / rect.height;
       if (x < 0 || x > 1 || y < 0 || y > 1) return;
-      const burst = pickInk(INK_STRENGTH * 4);
-      splat(x, y, 0, 0, burst);
+      splat(x, y, 0, 0, pickInk(0.3));
     }
 
-    // a soft ink bloom so the water is visible before the mouse moves
+    // throws ink from a ring around the cursor; amount scales with mouse speed
+    function emit(dt: number) {
+      const aspect = canvas!.width / canvas!.height;
+      // measure speed in square (v-unit) space so direction isn't distorted
+      const dsx = pointer.dx * aspect;
+      const dsy = pointer.dy;
+      pointer.dx = 0;
+      pointer.dy = 0;
+      const speed = Math.hypot(dsx, dsy) / Math.max(dt, 1e-4);
+
+      const now = performance.now();
+      if (now - pointer.lastColorAt > COLOR_ROTATE_MS) {
+        pointer.ink = pickInk(1);
+        pointer.lastColorAt = now;
+      }
+
+      const moving = speed > 0.02;
+      const angle = moving
+        ? Math.atan2(dsy, dsx) + (Math.random() - 0.5) * 1.6
+        : Math.random() * Math.PI * 2;
+      const power = Math.min(IDLE_POWER + speed * POWER_GAIN, MAX_POWER);
+      const amount = Math.min(IDLE_INK + speed * INK_GAIN, MAX_INK);
+
+      const ex = pointer.x + (Math.cos(angle) * CORE_OFFSET) / aspect;
+      const ey = pointer.y + Math.sin(angle) * CORE_OFFSET;
+      const ink = pointer.ink.map((c) => c * amount) as Ink;
+      splat(ex, ey, Math.cos(angle) * power, Math.sin(angle) * power, ink);
+      eraseAt(pointer.x, pointer.y);
+    }
+
+    // a soft ink bloom so the effect is visible before the mouse moves
     function initialBloom() {
       for (let i = 0; i < 4; i++) {
-        const ink = pickInk(INK_STRENGTH * 2.5);
+        const ink = pickInk(0.2);
         const x = 0.25 + Math.random() * 0.5;
         const y = 0.3 + Math.random() * 0.4;
-        const dx = 800 * (Math.random() - 0.5);
-        const dy = 800 * (Math.random() - 0.5);
+        const dx = 120 * (Math.random() - 0.5);
+        const dy = 120 * (Math.random() - 0.5);
         splat(x, y, dx, dy, ink);
       }
     }
@@ -723,14 +782,7 @@ export default function FluidCursor() {
       lastTime = now;
       if (!visible) return;
       if (resizeCanvas()) initFramebuffers();
-      if (pointer.moved) {
-        pointer.moved = false;
-        const dx = pointer.dx;
-        const dy = pointer.dy;
-        pointer.dx = 0;
-        pointer.dy = 0;
-        splat(pointer.x, pointer.y, dx, dy, pointer.ink);
-      }
+      if (pointer.inside) emit(dt);
       step(dt);
       render();
     }
