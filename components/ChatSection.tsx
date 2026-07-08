@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import GKLogo from "./GKLogo";
 
@@ -18,12 +18,26 @@ export default function ChatSection({
   children: React.ReactNode;
 }) {
   const [phase, setPhase] = useState<Phase>("idle");
+  const [run, setRun] = useState(0); // bumped on every nav click → remounts and replays the animation
 
   useEffect(() => {
     if (phase !== "thinking") return;
     const timer = setTimeout(() => setPhase("done"), 1300);
     return () => clearTimeout(timer);
-  }, [phase]);
+  }, [phase, run]);
+
+  // replay the whole chat animation every time a link to this section is clicked,
+  // not just on the first viewport enter
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      const target = e.target as Element | null;
+      if (!target?.closest?.(`a[href="#${id}"]`)) return;
+      setRun((r) => r + 1);
+      setPhase("thinking");
+    }
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [id]);
 
   const started = phase !== "idle";
   const revealed = phase === "done";
@@ -33,8 +47,10 @@ export default function ChatSection({
       id={id}
       onViewportEnter={() => setPhase((p) => (p === "idle" ? "thinking" : p))}
       viewport={{ once: true, margin: "-120px 0px" }}
-      className="relative mx-auto max-w-6xl scroll-mt-24 px-6 py-20 sm:py-24"
+      className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col justify-center px-6 py-16"
     >
+      {/* key remounts everything below on each replay so all animations restart */}
+      <Fragment key={run}>
       {/* simulated chat: GK avatar, user question, thinking dots */}
       <div className="flex flex-col items-center">
         <motion.div
@@ -103,6 +119,7 @@ export default function ChatSection({
           {children}
         </motion.div>
       </motion.div>
+      </Fragment>
     </motion.section>
   );
 }

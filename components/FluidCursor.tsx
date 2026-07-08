@@ -14,22 +14,22 @@ import { useEffect, useRef } from "react";
 
 const SIM_RESOLUTION = 144;
 const DYE_RESOLUTION = 720;
-const DENSITY_DISSIPATION = 1.3; // how fast the ink fades — high = tight halo around the cursor
+const DENSITY_DISSIPATION = 2.2; // how fast the ink fades — high = tight halo around the cursor
 const VELOCITY_DISSIPATION = 3.5; // high = viscous, motion dies out right next to the cursor
 const PRESSURE = 0.8;
 const PRESSURE_ITERATIONS = 20;
-const CURL = 10; // vorticity — kept low for slow plasma swirls instead of chaotic marbling
-const SPLAT_RADIUS = 0.0042; // fat soft blobs (plasma) rather than thin ink jets
+const CURL = 14; // vorticity — low for slow swirls; just enough for colors to fold into each other
+const SPLAT_RADIUS = 0.003; // concentrated blobs — deeper color in a smaller footprint
 const ERASE_RADIUS = 0.003; // white core under the cursor
-const ERASE_STRENGTH = 0.4; // per-frame fade toward white inside the core
+const ERASE_STRENGTH = 0.3; // per-frame fade toward white inside the core
 const CORE_OFFSET = 0.05; // ring (in v-units) the ink is thrown from — must clear the erase core
-const IDLE_POWER = 60; // throw strength while the mouse rests
-const POWER_GAIN = 110; // extra throw strength per uv/s of mouse speed
-const MAX_POWER = 320;
-const IDLE_INK = 0.014; // ink per frame while the mouse rests
-const INK_GAIN = 0.06; // extra ink per uv/s of mouse speed
-const MAX_INK = 0.12;
-const COLOR_ROTATE_MS = 200;
+const IDLE_POWER = 35; // throw strength while the mouse rests
+const POWER_GAIN = 90; // extra throw strength per uv/s of mouse speed
+const MAX_POWER = 240;
+const IDLE_INK = 0.02; // ink per frame while the mouse rests
+const INK_GAIN = 0.09; // extra ink per uv/s of mouse speed
+const MAX_INK = 0.2;
+const COLOR_CYCLE_MS = 1200; // time to blend from one palette color to the next
 
 // site palette — greens dominate, teal/blue as accents
 const PALETTE: Array<[number, number, number]> = [
@@ -44,12 +44,26 @@ const PALETTE: Array<[number, number, number]> = [
 
 type Ink = [number, number, number];
 
-function pickInk(strength: number): Ink {
-  const i =
-    Math.random() < 0.7
-      ? Math.floor(Math.random() * 4)
-      : 4 + Math.floor(Math.random() * 3);
-  const [r, g, b] = PALETTE[i];
+// smooth green -> blue -> green sweep: ping-pongs through the palette so the
+// emitted color drifts constantly and adjacent trails blend into gradients
+function paletteColor(nowMs: number): [number, number, number] {
+  const n = PALETTE.length;
+  const cycle = 2 * (n - 1);
+  const p = (nowMs / COLOR_CYCLE_MS) % cycle;
+  const pos = p < n - 1 ? p : cycle - p;
+  const i = Math.min(Math.floor(pos), n - 2);
+  const f = pos - i;
+  const a = PALETTE[i];
+  const b = PALETTE[i + 1];
+  return [
+    a[0] + (b[0] - a[0]) * f,
+    a[1] + (b[1] - a[1]) * f,
+    a[2] + (b[2] - a[2]) * f,
+  ];
+}
+
+function inkAt(nowMs: number, strength: number): Ink {
+  const [r, g, b] = paletteColor(nowMs);
   return [(1 - r) * strength, (1 - g) * strength, (1 - b) * strength];
 }
 
@@ -294,15 +308,39 @@ const GRADIENT_SUBTRACT_FRAG = `
   }
 `;
 
-// ink is subtractive: invert so empty water renders white (invisible on the page)
+// ink is subtractive: invert so empty water renders white (invisible on the page).
+// A normal computed from the ink gradient adds glassy shading: darker creases
+// on the thick side, a white specular glint on the lit side — liquid glass.
 const DISPLAY_FRAG = `
   precision highp float;
   precision highp sampler2D;
   varying vec2 vUv;
+  varying vec2 vL;
+  varying vec2 vR;
+  varying vec2 vT;
+  varying vec2 vB;
   uniform sampler2D uTexture;
+  uniform vec2 texelSize;
   void main () {
     vec3 ink = clamp(texture2D(uTexture, vUv).rgb, 0.0, 1.0);
-    gl_FragColor = vec4(vec3(1.0) - ink, 1.0);
+    vec3 c = vec3(1.0) - ink;
+
+    float lL = length(texture2D(uTexture, vL).rgb);
+    float lR = length(texture2D(uTexture, vR).rgb);
+    float lT = length(texture2D(uTexture, vT).rgb);
+    float lB = length(texture2D(uTexture, vB).rgb);
+    vec3 n = normalize(vec3(lL - lR, lB - lT, length(texelSize) * 4.0));
+    float amount = min(length(ink) * 2.0, 1.0);
+
+    // soft diffuse shading from an overhead light — reads as depth
+    float diffuse = clamp(dot(n, vec3(0.0, 0.0, 1.0)) + 0.75, 0.75, 1.0);
+    c *= mix(1.0, diffuse, amount);
+
+    // specular glint from an upper-left light — reads as a wet glass surface
+    float spec = pow(clamp(dot(n, normalize(vec3(-0.35, 0.5, 0.8))), 0.0, 1.0), 10.0);
+    c = mix(c, vec3(1.0), spec * amount * 0.6);
+
+    gl_FragColor = vec4(c, 1.0);
   }
 `;
 
@@ -672,6 +710,7 @@ export default function FluidCursor() {
 
     function render() {
       displayProgram.bind();
+      gl!.uniform2f(displayProgram.uniforms.texelSize, dye.read.texelSizeX, dye.read.texelSizeY);
       gl!.uniform1i(displayProgram.uniforms.uTexture, dye.read.attach(0));
       blit(null);
     }
@@ -683,8 +722,6 @@ export default function FluidCursor() {
       dx: 0, // uv delta accumulated since the last frame
       dy: 0,
       inside: false,
-      ink: pickInk(1),
-      lastColorAt: 0,
     };
 
     function onPointerMove(e: PointerEvent) {
@@ -717,7 +754,7 @@ export default function FluidCursor() {
       const x = (e.clientX - rect.left) / rect.width;
       const y = 1 - (e.clientY - rect.top) / rect.height;
       if (x < 0 || x > 1 || y < 0 || y > 1) return;
-      splat(x, y, 0, 0, pickInk(0.3));
+      splat(x, y, 0, 0, inkAt(performance.now(), 0.3));
     }
 
     // throws ink from a ring around the cursor; amount scales with mouse speed
@@ -731,11 +768,6 @@ export default function FluidCursor() {
       const speed = Math.hypot(dsx, dsy) / Math.max(dt, 1e-4);
 
       const now = performance.now();
-      if (now - pointer.lastColorAt > COLOR_ROTATE_MS) {
-        pointer.ink = pickInk(1);
-        pointer.lastColorAt = now;
-      }
-
       const moving = speed > 0.02;
       const angle = moving
         ? Math.atan2(dsy, dsx) + (Math.random() - 0.5) * 1.6
@@ -745,15 +777,15 @@ export default function FluidCursor() {
 
       const ex = pointer.x + (Math.cos(angle) * CORE_OFFSET) / aspect;
       const ey = pointer.y + Math.sin(angle) * CORE_OFFSET;
-      const ink = pointer.ink.map((c) => c * amount) as Ink;
-      splat(ex, ey, Math.cos(angle) * power, Math.sin(angle) * power, ink);
+      splat(ex, ey, Math.cos(angle) * power, Math.sin(angle) * power, inkAt(now, amount));
       eraseAt(pointer.x, pointer.y);
     }
 
     // a soft ink bloom so the effect is visible before the mouse moves
     function initialBloom() {
+      const now = performance.now();
       for (let i = 0; i < 4; i++) {
-        const ink = pickInk(0.2);
+        const ink = inkAt(now + i * 900, 0.2); // offset phases = varied colors
         const x = 0.25 + Math.random() * 0.5;
         const y = 0.3 + Math.random() * 0.4;
         const dx = 120 * (Math.random() - 0.5);

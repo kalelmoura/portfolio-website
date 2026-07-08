@@ -17,7 +17,7 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 96px;
+  scroll-padding-top: 64px; /* fixed header height — anchors land flush under it */
 }
 
 body {
