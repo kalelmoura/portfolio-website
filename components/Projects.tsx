@@ -99,7 +99,7 @@ const PROJECTS: Project[] = [
     gradient: "bg-[linear-gradient(160deg,#0b1226_0%,#16224a_55%,#1e3a8a_100%)]",
     glow: "bg-blue-500/25",
     mock: <InFamilyMock />,
-    link: null,
+    link: { label: "Live Demo", href: "https://infamily.store" },
     media: [],
   },
   {
