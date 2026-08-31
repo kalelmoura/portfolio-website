@@ -21,11 +21,11 @@ type Project = {
   mock: React.ReactNode;
   /** "Live Demo" for sites, "Download" for apps; null shows "In Production" */
   link: { label: "Live Demo" | "Download"; href: string } | null;
-  /** files live in public/projects/<name>/ — e.g. { type: "image", src: "/projects/muscle-coach/1.png" } */
+  /** files live in public/projects/<name>/ — e.g. { type: "image", src: "/projects/mind-muscle/1.png" } */
   media: Media[];
 };
 
-function MuscleCoachMock() {
+function MindMuscleMock() {
   return (
     <div className="space-y-2.5">
       <div className="w-fit max-w-[85%] rounded-2xl rounded-bl-md bg-white/10 px-3.5 py-2 text-xs text-white/85">
@@ -43,7 +43,7 @@ function MuscleCoachMock() {
   );
 }
 
-function InfamilyMock() {
+function InFamilyMock() {
   return (
     <div className="space-y-2.5">
       <div className="grid grid-cols-3 gap-2">
@@ -90,28 +90,28 @@ function MoneyXRayMock() {
 
 const PROJECTS: Project[] = [
   {
-    eyebrow: "AI Fitness App",
-    name: "Muscle Coach",
-    year: "2026",
-    description:
-      "AI fitness coaching app that builds your workouts and coaches you through every set, right from your phone.",
-    tech: ["React Native", "Expo", "FastAPI", "Claude API"],
-    gradient: "bg-[linear-gradient(160deg,#0a1f14_0%,#123324_55%,#14532d_100%)]",
-    glow: "bg-green-500/25",
-    mock: <MuscleCoachMock />,
-    link: null,
-    media: [],
-  },
-  {
     eyebrow: "Full-Stack System",
-    name: "inf.amily",
+    name: "In Family",
     year: "2025",
     description:
       "Full-stack store management system — inventory, sales and reporting for a real business, in one place.",
     tech: ["Next.js", "FastAPI", "Supabase"],
     gradient: "bg-[linear-gradient(160deg,#0b1226_0%,#16224a_55%,#1e3a8a_100%)]",
     glow: "bg-blue-500/25",
-    mock: <InfamilyMock />,
+    mock: <InFamilyMock />,
+    link: null,
+    media: [],
+  },
+  {
+    eyebrow: "AI Fitness App",
+    name: "Mind Muscle",
+    year: "2026",
+    description:
+      "AI fitness coaching app that builds your workouts and coaches you through every set, right from your phone.",
+    tech: ["React Native", "Expo", "FastAPI", "Claude API"],
+    gradient: "bg-[linear-gradient(160deg,#0a1f14_0%,#123324_55%,#14532d_100%)]",
+    glow: "bg-green-500/25",
+    mock: <MindMuscleMock />,
     link: null,
     media: [],
   },
@@ -220,9 +220,9 @@ function ProjectModal({ project, onClose }: { project: Project; onClose: () => v
           </div>
         )}
 
-        <div className="mt-8 space-y-4">
-          {project.media.length > 0 ? (
-            project.media.map((m) =>
+        {project.media.length > 0 && (
+          <div className="mt-8 space-y-4">
+            {project.media.map((m) =>
               m.type === "image" ? (
                 <img
                   key={m.src}
@@ -240,13 +240,9 @@ function ProjectModal({ project, onClose }: { project: Project; onClose: () => v
                   className="w-full rounded-2xl border border-slate-200"
                 />
               )
-            )
-          ) : (
-            <div className="rounded-2xl border-2 border-dashed border-slate-200 py-14 text-center text-sm text-[var(--muted)]">
-              Screenshots coming soon
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );

@@ -1,6 +1,6 @@
 const FACTS = [
-  { emoji: "🎓", text: "Software engineering student" },
-  { emoji: "🤖", text: "Building AI-powered apps" },
+  { emoji: "🎓", text: "Computer Science student" },
+  { emoji: "💻", text: "Software Engineer" },
   { emoji: "🚀", text: "From idea to production" },
 ];
 
@@ -8,11 +8,11 @@ export default function About() {
   return (
     <div className="mx-auto max-w-2xl text-center">
       <p className="text-lg leading-relaxed text-[var(--sub)]">
-        I&apos;m Gabriel Kalel Rosa Moura — Kalel for short — a software
-        engineering student and developer. I like taking ideas all the way to
-        production: designing the product, building the backend, shipping the
-        app. Lately that means AI-powered tools, where a model does the
-        thinking and clean, reliable code does the work.
+        I&apos;m Gabriel Kalel Rosa Moura, a software engineer and student at the
+        University of Westminster. My current interests are machine learning and
+        AI engineering. I like taking ideas all the way to production: designing
+        the product, building it, shipping it, and putting it in front of real
+        users.
       </p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         {FACTS.map((fact) => (

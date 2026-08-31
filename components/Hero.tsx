@@ -49,10 +49,9 @@ function useTypewriter(words: string[], typeSpeed = 85, deleteSpeed = 45, pause 
 }
 
 const SOCIALS = [
-  // TODO: replace with real profile URLs
-  { label: "GitHub", href: "https://github.com", Icon: GitHubIcon },
-  { label: "LinkedIn", href: "https://linkedin.com", Icon: LinkedInIcon },
-  { label: "Instagram", href: "https://instagram.com", Icon: InstagramIcon },
+  { label: "GitHub", href: "https://github.com/kalelmoura", Icon: GitHubIcon },
+  { label: "LinkedIn", href: "https://www.linkedin.com/in/gabrielkalelmoura", Icon: LinkedInIcon },
+  { label: "Instagram", href: "https://instagram.com/gabrielrosamoura", Icon: InstagramIcon },
 ];
 
 const SECTION_LINKS = [

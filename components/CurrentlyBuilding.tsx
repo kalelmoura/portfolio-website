@@ -4,22 +4,12 @@ import { motion } from "framer-motion";
 
 const BUILDING = [
   {
-    name: "Muscle Coach",
-    tagline: "AI fitness coaching app",
-    focus: [
-      "Smarter workout generation with the Claude API",
-      "Real-time coaching flow in React Native / Expo",
-      "FastAPI backend for plans and progress tracking",
-    ],
+    name: "In Family",
+    tagline: "Full-stack store management system",
   },
   {
-    name: "inf.amily",
-    tagline: "Full-stack store management system",
-    focus: [
-      "Inventory and sales dashboards in Next.js",
-      "Supabase auth, storage and realtime data",
-      "Reporting endpoints on FastAPI",
-    ],
+    name: "Gym Management Platform",
+    tagline: "Full-stack platform for a private client, under NDA",
   },
 ];
 
@@ -48,14 +38,6 @@ export default function CurrentlyBuilding() {
               In development
             </span>
           </div>
-          <ul className="mt-5 space-y-2.5">
-            {project.focus.map((item) => (
-              <li key={item} className="flex items-start gap-2.5 text-sm leading-relaxed text-[var(--sub)]">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" />
-                {item}
-              </li>
-            ))}
-          </ul>
         </motion.div>
       ))}
     </div>

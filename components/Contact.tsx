@@ -3,19 +3,28 @@
 import { useState } from "react";
 import { GitHubIcon, InstagramIcon, LinkedInIcon, MailIcon } from "./icons";
 
-const CONTACT_EMAIL = "kalelacez@gmail.com";
+const CONTACT_EMAIL = "gabrielkalelmoura@gmail.com";
 
 const LINKS = [
-  // TODO: replace with real profile URLs
   {
     label: "Email",
     value: CONTACT_EMAIL,
     href: `mailto:${CONTACT_EMAIL}`,
     Icon: MailIcon,
   },
-  { label: "GitHub", value: "@kalel", href: "https://github.com", Icon: GitHubIcon },
-  { label: "LinkedIn", value: "Gabriel Kalel", href: "https://linkedin.com", Icon: LinkedInIcon },
-  { label: "Instagram", value: "@kalel", href: "https://instagram.com", Icon: InstagramIcon },
+  { label: "GitHub", value: "@kalelmoura", href: "https://github.com/kalelmoura", Icon: GitHubIcon },
+  {
+    label: "LinkedIn",
+    value: "gabrielkalelmoura",
+    href: "https://www.linkedin.com/in/gabrielkalelmoura",
+    Icon: LinkedInIcon,
+  },
+  {
+    label: "Instagram",
+    value: "@gabrielrosamoura",
+    href: "https://instagram.com/gabrielrosamoura",
+    Icon: InstagramIcon,
+  },
 ];
 
 export default function Contact() {
